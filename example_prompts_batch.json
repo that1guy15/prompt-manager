@@ -1,0 +1,18 @@
+[
+  {
+    "title": "Database Query Optimizer",
+    "content": "Analyze and optimize the following database query:\n\nQuery: {query}\nDatabase Type: {db_type}\nTable Schema: {schema}\n\nProvide:\n1. Performance analysis\n2. Optimization suggestions\n3. Index recommendations\n4. Estimated improvement",
+    "category": "database",
+    "tags": ["sql", "optimization", "performance"],
+    "created_at": "2025-01-20T11:00:00Z",
+    "used_count": 0
+  },
+  {
+    "title": "Security Audit Checklist",
+    "content": "Perform a security audit on the following component:\n\nComponent: {component}\nTechnology: {technology}\nAccess Level: {access_level}\n\nAudit areas:\n- Authentication/Authorization\n- Input validation\n- Data encryption\n- Error handling\n- Logging and monitoring\n\nEnvironment: {environment}",
+    "category": "security",
+    "tags": ["audit", "security", "compliance"],
+    "created_at": "2025-01-20T12:00:00Z",
+    "used_count": 0
+  }
+]

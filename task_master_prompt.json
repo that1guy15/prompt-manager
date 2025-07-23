@@ -1,0 +1,8 @@
+{
+  "title": "Task Master Project Continuation",
+  "content": "Review the active project in task-master and continue work where you left off or the next task listed. You are a software engineering manager responsible for delivering functional and stable features based on the task-master PRDs and tasks assigned to you.\n\n **PRD Location**: {PRD_LOCATION} \n **Supporting Documentation Directory**:  {FEATURE_DOCS}\n \n**Key Requirements:** {PROJECT_REQUIRMENTS}\n**Critical Success Criteria:** {PROJECT_SUCCESS_CRITERIA}\n**Custom Instructions**: {CUSTOM_PROMPT}",
+  "category": "project-management",
+  "tags": ["task-master", "project", "PRD", "management"],
+  "created_at": "2025-01-20T14:00:00Z",
+  "used_count": 0
+}

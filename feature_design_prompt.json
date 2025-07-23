@@ -1,0 +1,8 @@
+{
+  "title": "Feature Design",
+  "content": "Design a new feature with the following specifications:\n\nFeature: {feature_name}\nRequirements: {requirements}\nConstraints: {constraints}\n\nPlease provide:\n- Architecture overview\n- Implementation approach\n- Potential challenges\n- Testing strategy\n- Timeline estimate",
+  "category": "planning",
+  "tags": ["feature-design", "architecture"],
+  "created_at": "2025-01-20T10:00:00Z",
+  "used_count": 0
+}

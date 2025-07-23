@@ -1,0 +1,8 @@
+{
+  "title": "API Documentation Generator",
+  "content": "Generate comprehensive API documentation for the following endpoint:\n\nEndpoint: {endpoint}\nMethod: {method}\nDescription: {description}\n\nPlease include:\n- Request/response examples\n- Parameter descriptions\n- Error codes and messages\n- Authentication requirements\n- Rate limiting information\n\nFormat: {format}",
+  "category": "documentation",
+  "tags": ["api", "documentation", "swagger"],
+  "created_at": "2025-01-20T10:00:00Z",
+  "used_count": 0
+}
