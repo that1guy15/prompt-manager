@@ -1,0 +1,73 @@
+{
+  "manifest_version": 3,
+  "name": "Prompt Manager - AI Assistant",
+  "version": "0.0.16",
+  "description": "Intelligent prompt suggestions and management for developers and content creators",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "clipboardWrite",
+    "nativeMessaging"
+  ],
+  
+  "host_permissions": [
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*",
+    "http://0.0.0.0:*/*",
+    "https://*.anthropic.com/*",
+    "https://*.openai.com/*",
+    "https://*.github.com/*",
+    "https://*.claude.ai/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "https://claude.ai/*",
+        "https://chat.openai.com/*",
+        "https://github.com/*",
+        "https://docs.google.com/*",
+        "https://mail.google.com/*",
+        "https://linear.app/*",
+        "https://notion.so/*",
+        "https://slack.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["prompt-suggestions.css"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Prompt Manager",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["prompt-widget.html", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "options_page": "options.html"
+}

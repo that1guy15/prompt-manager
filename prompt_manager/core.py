@@ -12,25 +12,32 @@ from datetime import datetime
 
 
 def show_banner():
-    """Display the Prompt Manager banner with ASCII art"""
-    banner = """
-    ╭─────────────────────────────────────────────────────────────────╮
-    │                                                                 │
-    │    🐔 PROMPT MANAGER - AI Workflow Automation 🐔               │
-    │                                                                 │
-    │             /""\\,  ┌─────────────────┐                          │
-    │            <>^  L  │  Smart Prompts  │     ○○○○○               │
-    │             `) /`  │  Task-Master    │    ○    ○○○            │
-    │              \\ `-  │  Integration    │   ○      ○○○○          │
-    │               '";  │  Browser Magic  │  ○        ○○○○○        │
-    │              _/_ Y └─────────────────┘ ○          ○○○○○○      │
-    │                                        ○            ○○○○○    │
-    │                                         ○○○○○○○○○○○○○○○○○   │
-    │                                          \\_______________/    │
-    │                                                                 │
-    │         "Rise up to better prompts with rooster pride!"        │
-    │                                                                 │
-    ╰─────────────────────────────────────────────────────────────────╯
+    """Display the Prompt Manager banner with cyan to violet gradient"""
+    # ANSI color codes
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    
+    # Gradient colors from cyan to violet
+    CYAN = '\033[38;5;51m'      # Bright cyan
+    CYAN_BLUE = '\033[38;5;45m' # Cyan-blue
+    BLUE = '\033[38;5;39m'      # Blue
+    BLUE_PURPLE = '\033[38;5;63m' # Blue-purple
+    PURPLE = '\033[38;5;93m'    # Purple
+    VIOLET = '\033[38;5;129m'   # Violet
+    
+    banner = f"""
+{CYAN}═══════════════════════════════════════════════════════════════════{RESET}
+
+{CYAN}{BOLD}  ____                            _         {RESET}
+{CYAN_BLUE}{BOLD} |  _ \\ _ __ ___  _ __ ___  _ __ | |_ _   _ {RESET}
+{BLUE}{BOLD} | |_) | '__/ _ \\| '_ ` _ \\| '_ \\| __| | | |{RESET}
+{BLUE_PURPLE}{BOLD} |  __/| | | (_) | | | | | | |_) | |_| |_| |{RESET}
+{PURPLE}{BOLD} |_|   |_|  \\___/|_| |_| |_| .__/ \\__|\\__, |{RESET}
+{VIOLET}{BOLD}                           |_|        |___/ {RESET}
+
+  Build context aware prompts effortlessly
+
+{VIOLET}═══════════════════════════════════════════════════════════════════{RESET}
     """
     print(banner)
 
@@ -278,54 +285,20 @@ class PromptManager:
         prompt_vars = prompt.get("variables", [])
         system_vars = self.prompts.get("variables", {})
         
-        # Initialize secure variable manager for secure variables
-        svm = None
-        try:
-            import sys
-            import os
-            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
-            from secure_variables import SecureVariableManager
-            svm = SecureVariableManager(self.data_file)
-        except:
-            pass
-        
         final_variables = {}
-        secure_vars_used = []
-        
         for var in prompt_vars:
             if variables and var in variables:
-                # User provided value takes precedence
                 final_variables[var] = variables[var]
-            elif svm:
-                # Check if it's a secure variable
-                secure_value = svm.get_secure_variable(var)
-                if secure_value is not None:
-                    final_variables[var] = secure_value
-                    secure_vars_used.append(var)
-                    continue
-            
-            # Fall back to regular system variables
-            if var in system_vars and system_vars[var].get("default_value"):
+            elif var in system_vars and system_vars[var].get("default_value"):
                 final_variables[var] = system_vars[var]["default_value"]
                 print(f"Using default value for '{var}': {final_variables[var]}")
             else:
-                # Check if it might be a secure variable that requires authentication
-                if svm and not svm.session.is_authenticated():
-                    secure_data = svm._load_secure_data()
-                    if var in secure_data.get('secure_variables', {}):
-                        print(f"🔐 Variable '{var}' is secure and requires authentication")
-                        print("Run 'pmcli svar session info' to check authentication status")
-                        return
-                
                 print(f"No value provided for variable '{var}'")
                 return
         
-        # Replace variables in content
         for var, value in final_variables.items():
             content = content.replace(f"{{{var}}}", value)
-            
-            # Update usage count for regular variables only
-            if var in system_vars and var not in secure_vars_used:
+            if var in system_vars:
                 system_vars[var]["used_count"] = system_vars[var].get("used_count", 0) + 1
         
         try:
@@ -343,10 +316,6 @@ class PromptManager:
             prompt["used_count"] += 1
             self._save_prompts()
             print(f"Copied prompt '{prompt['title']}' to clipboard!")
-            
-            # Show secure variables that were used
-            if secure_vars_used:
-                print(f"🔐 Used secure variables: {', '.join(secure_vars_used)}")
             
         except subprocess.CalledProcessError:
             print("Failed to copy to clipboard. Here's the content:")
@@ -409,58 +378,20 @@ class PromptManager:
     
     def list_variables(self):
         variables = self.prompts.get("variables", {})
-        
-        # Try to load secure variables too (if available)
-        secure_variables = []
-        try:
-            import sys
-            import os
-            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
-            from secure_variables import SecureVariableManager
-            
-            svm = SecureVariableManager(self.data_file)
-            # Only list secure variables if user is authenticated
-            if svm.session.is_authenticated():
-                secure_variables = svm.list_secure_variables(show_values=False)
-        except:
-            # Secure variables not available or not authenticated
-            pass
-        
-        if not variables and not secure_variables:
+        if not variables:
             print("No variables defined.")
             return
         
-        print(f"\n{'Name':<20} {'Description':<40} {'Default':<15} {'Used':<5} {'Type':<8}")
-        print("-" * 95)
+        print(f"\n{'Name':<20} {'Description':<40} {'Default':<15} {'Used':<5}")
+        print("-" * 85)
         
-        # Display regular variables
         for name, var_data in variables.items():
             default = var_data.get('default_value', 'None')
             if default and len(default) > 13:
                 default = default[:10] + "..."
             
             print(f"{name:<20} {var_data['description'][:38]:<40} "
-                  f"{default:<15} {var_data['used_count']:<5} {'REGULAR':<8}")
-        
-        # Display secure variables with lock icon
-        for var in secure_variables:
-            name_with_icon = f"🔒 {var['name']}"
-            desc = var['description'][:38] if len(var['description']) > 38 else var['description']
-            default = var['default_value'] if var['default_value'] else 'None'
-            if default and len(default) > 13:
-                default = default[:10] + "..."
-            
-            print(f"{name_with_icon:<20} {desc:<40} {default:<15} {var['used_count']:<5} {'SECURE':<8}")
-        
-        # Show authentication hint if secure variables exist but user isn't authenticated
-        if not secure_variables:
-            try:
-                svm = SecureVariableManager(self.data_file)
-                secure_data = svm._load_secure_data()
-                if secure_data.get('secure_variables'):
-                    print(f"\n💡 Some secure variables are hidden. Use 'pmcli svar list' to view them.")
-            except:
-                pass
+                  f"{default:<15} {var_data['used_count']:<5}")
     
     def update_variable(self, name: str, description: str = None, default_value: str = None):
         variables = self.prompts.get("variables", {})
@@ -538,16 +469,6 @@ VARIABLES:
 • var list                           List all variables
 • var update name -d "desc"          Update variable
 • var delete name                    Delete variable
-
-SECURE VARIABLES (pmcli):
-• pmcli svar add name "desc"         Add secure variable (encrypted)
-• pmcli svar list                    List secure variables
-• pmcli svar session info            Check authentication status
-
-LOG SANITIZATION (pmcli):
-• pmcli sanitize                     Clean clipboard logs
-• pmcli sanitize -i file -o out      Sanitize log file
-• pmcli sanitize -p -s               Preview with statistics
 
 CATEGORIES & SEARCH:
 • categories                         List all categories

@@ -1,0 +1,718 @@
+#!/usr/bin/env python3
+
+"""
+Task-Master Prompt Integration Tool
+Quick command to extract context from Task-Master and copy prompt to clipboard
+"""
+
+import sys
+import os
+import subprocess
+import json
+import argparse
+
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
+
+from task_master_context_extractor import TaskMasterContextExtractor
+from prompt_manager import PromptManager
+from project_registry import ProjectRegistry
+import requests
+
+
+def show_tm_banner():
+    """Display the Task-Master integration banner"""
+    banner = """
+    ╭─────────────────────────────────────────────────────────────────╮
+    │                                                                 │
+    │         🦊 PROMPT MANAGER INTEGRATION 🦊                       │
+    │                                                                 │
+    │           ╱╲__╱╲  ┌─────────────────────┐                      │
+    │          (  ●.● ) │  Project Context    │    📋              │
+    │           > ^ <   │  PRD Extraction     │   📋📋             │
+    │          /|   |\\  │  Git Integration    │  📋📋📋            │
+    │         (_|   |_) │  Smart Automation   │ 📋📋📋📋           │
+    │           └───┘   └─────────────────────┘ 📋📋📋📋📋          │
+    │                                           📋📋📋📋📋📋         │
+    │                                            📋📋📋📋📋📋        │
+    │                         🪄 Context Magic! 📋📋📋📋📋📋📋       │
+    │                                                                 │
+    │               "Your AI prompt companion, always ready!"         │
+    │                                                                 │
+    ╰─────────────────────────────────────────────────────────────────╯
+    """
+    print(banner)
+
+
+def get_api_url_tm(args_api_url: str = None) -> str:
+    """Get API URL from args, environment, or prompt user for tm-prompt"""
+    # First check command line argument
+    if args_api_url and args_api_url != "http://localhost:5000/api":
+        return args_api_url
+    
+    # Then check environment variable  
+    env_url = os.environ.get("PROMPT_API_URL")
+    if env_url:
+        return env_url
+    
+    # Check if localhost API is reachable
+    default_url = "http://localhost:5000/api"
+    try:
+        response = requests.get(f"{default_url.rstrip('/api')}/health", timeout=2)
+        if response.status_code == 200:
+            return default_url
+    except:
+        pass
+    
+    # Prompt user for API URL
+    print("\n🔗 Task-Master Integration Setup")
+    print("=" * 50)
+    print("The Prompt Manager API server is not reachable.")
+    print("Please start the API server or provide a custom URL.")
+    print()
+    print("💡 To start the API server: python3 src/prompt_api.py")
+    print()
+    
+    while True:
+        user_input = input(f"API URL [{default_url}]: ").strip()
+        api_url = user_input if user_input else default_url
+        
+        # Validate URL format
+        if not api_url.startswith(('http://', 'https://')):
+            print("❌ Please enter a valid URL starting with http:// or https://")
+            continue
+            
+        # Test connection
+        print(f"🔍 Testing connection to {api_url}...")
+        try:
+            test_url = api_url.replace('/api', '').rstrip('/') + '/health'
+            response = requests.get(test_url, timeout=5)
+            if response.status_code == 200:
+                print("✅ Connection successful!")
+                return api_url
+            else:
+                print(f"❌ Server responded with status {response.status_code}")
+        except Exception as e:
+            print(f"❌ Connection failed: {e}")
+        
+        retry = input("\n🔄 Try a different URL? (Y/n): ").strip().lower()
+        if retry == 'n':
+            print("⚠️  Using provided URL without verification...")
+            return api_url
+
+
+def copy_to_clipboard(content: str) -> bool:
+    """Copy content to clipboard"""
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["pbcopy"], input=content, text=True, check=True)
+        elif sys.platform.startswith("linux"):
+            subprocess.run(["xclip", "-selection", "clipboard"], input=content, text=True, check=True)
+        else:
+            return False
+        return True
+    except:
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Prompt Manager CLI - CRUD operations and Task-Master integration")
+    
+    # Create subparsers for different command groups
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    
+    # Task-Master integration (default behavior when no subcommand)
+    tm_parser = subparsers.add_parser("tm", help="Task-Master integration", add_help=False)
+    tm_parser.add_argument('--prompt-id', '-p', type=int, default=4,
+                          help='Prompt ID to use (default: 4 - Task Master Project Continuation)')
+    tm_parser.add_argument('--api-url', default=os.environ.get('PROMPT_API_URL', 'http://localhost:5000/api'),
+                          help='API server URL (default: http://localhost:5000/api, or PROMPT_API_URL env var)')
+    tm_parser.add_argument('--show-context', '-s', action='store_true',
+                          help='Show extracted context')
+    tm_parser.add_argument('--dry-run', '-d', action='store_true',
+                          help='Show prompt without copying to clipboard')
+    tm_parser.add_argument('--api', action='store_true',
+                          help='Use API instead of direct access')
+    tm_parser.add_argument('--project-root', '-r', help='Project root directory')
+    tm_parser.add_argument('--project-id', help='Specific project ID to use')
+    tm_parser.add_argument('--list-projects', '-l', action='store_true',
+                          help='List available projects')
+    tm_parser.add_argument('--select-project', action='store_true',
+                          help='Interactively select a project')
+    
+    # Add global args for backward compatibility (when no subcommand used)
+    parser.add_argument('--prompt-id', '-p', type=int, default=4,
+                       help='Prompt ID to use (default: 4 - Task Master Project Continuation)')
+    parser.add_argument('--api-url', default=os.environ.get('PROMPT_API_URL', 'http://localhost:5000/api'),
+                       help='API server URL (default: http://localhost:5000/api, or PROMPT_API_URL env var)')
+    parser.add_argument('--show-context', '-s', action='store_true',
+                       help='Show extracted context')
+    parser.add_argument('--dry-run', '-d', action='store_true',
+                       help='Show prompt without copying to clipboard')
+    parser.add_argument('--api', action='store_true',
+                       help='Use API instead of direct access')
+    parser.add_argument('--project-root', '-r', help='Project root directory')
+    parser.add_argument('--project-id', help='Specific project ID to use')
+    parser.add_argument('--list-projects', '-l', action='store_true',
+                       help='List available projects')
+    parser.add_argument('--select-project', action='store_true',
+                       help='Interactively select a project')
+    
+    # CRUD commands
+    # List prompts
+    list_parser = subparsers.add_parser("list", help="List prompts")
+    list_parser.add_argument("-c", "--category", help="Filter by category")
+    list_parser.add_argument("-t", "--tag", help="Filter by tag")
+    list_parser.add_argument("-s", "--search", help="Search in title and content")
+    
+    # Copy prompt
+    copy_parser = subparsers.add_parser("copy", help="Copy prompt to clipboard")
+    copy_parser.add_argument("id", type=int, help="Prompt ID")
+    copy_parser.add_argument("-v", "--variables", nargs="*", help="Variables in key=value format")
+    copy_parser.add_argument("--vars-json", help="JSON file containing variables")
+    
+    # Show prompt
+    show_parser = subparsers.add_parser("show", help="Show prompt details")
+    show_parser.add_argument("id", type=int, help="Prompt ID")
+    
+    # Delete prompt
+    delete_parser = subparsers.add_parser("delete", help="Delete a prompt")
+    delete_parser.add_argument("id", type=int, help="Prompt ID")
+    
+    # Add prompt
+    add_parser = subparsers.add_parser("add", help="Add a new prompt")
+    add_parser.add_argument("--manual", nargs=2, metavar=('TITLE', 'CONTENT'), required=True, help="Add prompt manually")
+    add_parser.add_argument("-c", "--category", default="general", help="Category")
+    add_parser.add_argument("-t", "--tags", help="Comma-separated tags")
+    
+    # Variable management
+    var_parser = subparsers.add_parser("var", help="Manage template variables")
+    var_subparsers = var_parser.add_subparsers(dest="var_command", help="Variable commands")
+    
+    # Add variable
+    var_add_parser = var_subparsers.add_parser("add", help="Add a new variable")
+    var_add_parser.add_argument("name", help="Variable name")
+    var_add_parser.add_argument("description", help="Variable description")
+    var_add_parser.add_argument("default", nargs="?", help="Default value")
+    
+    # List variables
+    var_subparsers.add_parser("list", help="List all variables")
+    
+    # Update variable
+    var_update_parser = var_subparsers.add_parser("update", help="Update a variable")
+    var_update_parser.add_argument("name", help="Variable name")
+    var_update_parser.add_argument("-d", "--description", help="New description")
+    var_update_parser.add_argument("--default", help="New default value")
+    
+    # Delete variable
+    var_delete_parser = var_subparsers.add_parser("delete", help="Delete a variable")
+    var_delete_parser.add_argument("name", help="Variable name")
+    
+    # Secure variable management
+    svar_parser = subparsers.add_parser("svar", help="Manage secure variables (encrypted)")
+    svar_subparsers = svar_parser.add_subparsers(dest="svar_command", help="Secure variable commands")
+    
+    # Add secure variable
+    svar_add_parser = svar_subparsers.add_parser("add", help="Add a new secure variable")
+    svar_add_parser.add_argument("name", help="Variable name")
+    svar_add_parser.add_argument("description", help="Variable description")
+    svar_add_parser.add_argument("-d", "--default", help="Default value (optional)")
+    svar_add_parser.add_argument("--value", help="Variable value (will prompt if not provided)")
+    
+    # List secure variables
+    svar_list_parser = svar_subparsers.add_parser("list", help="List all secure variables")
+    svar_list_parser.add_argument("--show-values", action="store_true", help="Show actual values (DANGEROUS)")
+    
+    # Update secure variable
+    svar_update_parser = svar_subparsers.add_parser("update", help="Update a secure variable")
+    svar_update_parser.add_argument("name", help="Variable name")
+    svar_update_parser.add_argument("-d", "--description", help="New description")
+    svar_update_parser.add_argument("--default", help="New default value")
+    svar_update_parser.add_argument("--value", help="New variable value (will prompt if not provided)")
+    
+    # Delete secure variable
+    svar_delete_parser = svar_subparsers.add_parser("delete", help="Delete a secure variable")
+    svar_delete_parser.add_argument("name", help="Variable name")
+    svar_delete_parser.add_argument("-f", "--force", action="store_true", help="Force delete without confirmation")
+    
+    # Session management
+    svar_session_parser = svar_subparsers.add_parser("session", help="Manage secure session")
+    svar_session_subparsers = svar_session_parser.add_subparsers(dest="session_command", help="Session commands")
+    svar_session_subparsers.add_parser("info", help="Show session information")
+    svar_session_subparsers.add_parser("logout", help="End secure session")
+    svar_session_subparsers.add_parser("extend", help="Extend session time")
+    
+    # Audit log
+    svar_audit_parser = svar_subparsers.add_parser("audit", help="Show audit log")
+    svar_audit_parser.add_argument("-n", "--limit", type=int, default=20, help="Number of entries to show")
+    
+    # Export secure variables
+    svar_export_parser = svar_subparsers.add_parser("export", help="Export encrypted secure variables")
+    svar_export_parser.add_argument("file", help="Export file path")
+    
+    # Log sanitization
+    sanitize_parser = subparsers.add_parser("sanitize", help="Sanitize repetitive patterns from logs")
+    sanitize_parser.add_argument("-i", "--input", help="Input file (default: clipboard)")
+    sanitize_parser.add_argument("-o", "--output", help="Output file (default: clipboard)")
+    sanitize_parser.add_argument("-t", "--threshold", type=float, default=0.85, 
+                                help="Similarity threshold (0.0-1.0, default: 0.85)")
+    sanitize_parser.add_argument("-m", "--min-reps", type=int, default=3,
+                                help="Minimum repetitions before filtering (default: 3)")
+    sanitize_parser.add_argument("--no-sensitive-check", action="store_true",
+                                help="Disable sensitive data detection")
+    sanitize_parser.add_argument("-s", "--stats", action="store_true",
+                                help="Show sanitization statistics")
+    sanitize_parser.add_argument("-p", "--preview", action="store_true",
+                                help="Preview without copying to clipboard")
+    
+    args = parser.parse_args()
+    
+    # Handle CRUD commands first (don't show Task-Master banner for these)
+    if args.command in ['list', 'copy', 'show', 'delete', 'add', 'var', 'svar', 'sanitize']:
+        pm = PromptManager()
+        
+        if args.command == "list":
+            pm.list_prompts(args.category, args.tag, args.search)
+            return 0
+        
+        elif args.command == "copy":
+            variables = {}
+            # Handle --vars-json option
+            if args.vars_json:
+                try:
+                    with open(args.vars_json, 'r') as f:
+                        variables.update(json.load(f))
+                except (FileNotFoundError, json.JSONDecodeError) as e:
+                    print(f"❌ Error reading variables JSON: {e}")
+                    return 1
+            
+            # Handle -v key=value options
+            if args.variables:
+                for var in args.variables:
+                    if "=" in var:
+                        key, value = var.split("=", 1)
+                        variables[key] = value
+            
+            pm.copy_prompt(args.id, variables)
+            return 0
+        
+        elif args.command == "show":
+            pm.show_prompt(args.id)
+            return 0
+        
+        elif args.command == "delete":
+            pm.delete_prompt(args.id)
+            return 0
+        
+        elif args.command == "add":
+            tags = []
+            if args.tags:
+                tags = [tag.strip() for tag in args.tags.split(',')]
+            pm.add_prompt(args.manual[0], args.manual[1], args.category, tags)
+            return 0
+        
+        elif args.command == "var":
+            if not args.var_command:
+                var_parser.print_help()
+                return 1
+            elif args.var_command == "add":
+                pm.add_variable(args.name, args.description, args.default)
+            elif args.var_command == "list":
+                pm.list_variables()
+            elif args.var_command == "update":
+                pm.update_variable(args.name, args.description, args.default)
+            elif args.var_command == "delete":
+                pm.delete_variable(args.name)
+            return 0
+        
+        elif args.command == "svar":
+            # Import secure variables manager
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
+            from secure_variables import SecureVariableManager
+            
+            svm = SecureVariableManager()
+            
+            if not args.svar_command:
+                svar_parser.print_help()
+                return 1
+                
+            elif args.svar_command == "add":
+                # Get value from user if not provided
+                value = args.value
+                if not value:
+                    import getpass
+                    value = getpass.getpass(f"Enter value for '{args.name}': ")
+                
+                if svm.add_secure_variable(args.name, args.description, value, args.default):
+                    return 0
+                else:
+                    return 1
+                    
+            elif args.svar_command == "list":
+                variables = svm.list_secure_variables(show_values=args.show_values)
+                if not variables:
+                    print("No secure variables found.")
+                    return 0
+                
+                # Display with visual indicators
+                print(f"\n{'Name':<20} {'Description':<40} {'Default':<15} {'Used':<5} {'Type':<8}")
+                print("-" * 95)
+                
+                for var in variables:
+                    name_with_icon = f"🔒 {var['name']}"
+                    desc = var['description'][:38] if len(var['description']) > 38 else var['description']
+                    default = var['default_value'] if var['default_value'] else 'None'
+                    if default and len(default) > 13:
+                        default = default[:10] + "..."
+                    
+                    print(f"{name_with_icon:<20} {desc:<40} {default:<15} {var['used_count']:<5} {'SECURE':<8}")
+                
+                return 0
+                
+            elif args.svar_command == "update":
+                # Get new value if requested but not provided
+                value = args.value
+                if args.value is not None and not args.value:
+                    import getpass
+                    value = getpass.getpass(f"Enter new value for '{args.name}': ")
+                
+                if svm.update_secure_variable(args.name, args.description, value, args.default):
+                    return 0
+                else:
+                    return 1
+                    
+            elif args.svar_command == "delete":
+                if svm.delete_secure_variable(args.name, args.force):
+                    return 0
+                else:
+                    return 1
+                    
+            elif args.svar_command == "session":
+                if not args.session_command:
+                    svar_session_parser.print_help()
+                    return 1
+                    
+                if args.session_command == "info":
+                    session_info = svm.session.get_session_info()
+                    if session_info:
+                        print("🔐 Secure Session Information:")
+                        print(f"   Status: Authenticated ✅")
+                        print(f"   Created: {session_info['created_at'][:19]}")
+                        print(f"   Expires: {session_info['expires_at'][:19]}")
+                        print(f"   Time remaining: {session_info['time_remaining_minutes']} minutes")
+                        print(f"   Access count: {session_info['access_count']}")
+                    else:
+                        print("🔐 No active secure session")
+                    return 0
+                    
+                elif args.session_command == "logout":
+                    if svm.session.logout():
+                        return 0
+                    else:
+                        return 1
+                        
+                elif args.session_command == "extend":  
+                    if svm.session.extend_session():
+                        print("✅ Session extended")
+                        return 0
+                    else:
+                        print("❌ Failed to extend session")
+                        return 1
+                        
+            elif args.svar_command == "audit":
+                svm.print_audit_log(args.limit) 
+                return 0
+                
+            elif args.svar_command == "export":
+                if svm.export_secure_variables_encrypted(args.file):
+                    return 0
+                else:
+                    return 1
+            
+            return 0
+        
+        elif args.command == "sanitize":
+            # Import log sanitizer
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
+            from log_sanitizer import LogSanitizer, LogSanitizerConfig
+            import subprocess
+            
+            # Get input content
+            content = ""
+            if args.input:
+                # Read from file
+                try:
+                    with open(args.input, 'r') as f:
+                        content = f.read()
+                except Exception as e:
+                    print(f"❌ Error reading file: {e}")
+                    return 1
+            else:
+                # Read from clipboard
+                try:
+                    if sys.platform == "darwin":
+                        content = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
+                    elif sys.platform.startswith("linux"):
+                        content = subprocess.run(["xclip", "-selection", "clipboard", "-o"], 
+                                               capture_output=True, text=True).stdout
+                    else:
+                        print("❌ Clipboard not supported on this platform")
+                        return 1
+                except Exception as e:
+                    print(f"❌ Error reading clipboard: {e}")
+                    return 1
+            
+            if not content.strip():
+                print("❌ No content to sanitize")
+                return 1
+            
+            # Configure sanitizer
+            config = LogSanitizerConfig()
+            config.similarity_threshold = args.threshold
+            config.min_repetitions = args.min_reps
+            config.sensitive_data_check = not args.no_sensitive_check
+            
+            # Create sanitizer and process content
+            sanitizer = LogSanitizer(
+                similarity_threshold=config.similarity_threshold,
+                min_repetitions=config.min_repetitions
+            )
+            
+            # Check for sensitive data
+            if config.sensitive_data_check:
+                warnings = sanitizer.detect_sensitive_data(content)
+                if warnings:
+                    print("⚠️  Sensitive data detected:")
+                    for warning in warnings:
+                        print(f"   - {warning}")
+                    proceed = input("\nProceed with sanitization? (y/N): ").strip().lower()
+                    if proceed != 'y':
+                        print("❌ Sanitization cancelled")
+                        return 1
+            
+            # Sanitize content
+            sanitized = sanitizer.sanitize(content)
+            stats = sanitizer.get_stats()
+            
+            # Show statistics if requested
+            if args.stats:
+                print("\n📊 Sanitization Statistics:")
+                print(f"   Total lines: {stats['total_lines']}")
+                print(f"   Output lines: {stats['unique_lines']}")
+                print(f"   Filtered lines: {stats['filtered_lines']}")
+                print(f"   Pattern groups: {stats['pattern_groups']}")
+                reduction = (1 - stats['unique_lines'] / max(stats['total_lines'], 1)) * 100
+                print(f"   Size reduction: {reduction:.1f}%")
+            
+            # Output results
+            if args.preview:
+                print("\n" + "="*60)
+                print("PREVIEW - Sanitized Content:")
+                print("="*60)
+                print(sanitized)
+                print("="*60)
+            else:
+                if args.output:
+                    # Write to file
+                    try:
+                        with open(args.output, 'w') as f:
+                            f.write(sanitized)
+                        print(f"✅ Sanitized content written to {args.output}")
+                        if args.stats:
+                            print(f"   Reduced from {stats['total_lines']} to {stats['unique_lines']} lines")
+                    except Exception as e:
+                        print(f"❌ Error writing file: {e}")
+                        return 1
+                else:
+                    # Copy to clipboard
+                    try:
+                        if sys.platform == "darwin":
+                            subprocess.run(["pbcopy"], input=sanitized, text=True, check=True)
+                        elif sys.platform.startswith("linux"):
+                            subprocess.run(["xclip", "-selection", "clipboard"], 
+                                         input=sanitized, text=True, check=True)
+                        else:
+                            print("❌ Clipboard not supported on this platform")
+                            print("\nSanitized content:")
+                            print("-" * 40)
+                            print(sanitized)
+                            return 1
+                        
+                        print("✅ Sanitized content copied to clipboard!")
+                        if not args.stats:
+                            print(f"   Reduced from {stats['total_lines']} to {stats['unique_lines']} lines")
+                    except Exception as e:
+                        print(f"❌ Error copying to clipboard: {e}")
+                        return 1
+            
+            return 0
+    
+    # Task-Master integration (original behavior)
+    # Show banner for Task-Master commands
+    show_tm_banner()
+    
+    # Get API URL with prompting if needed (only when using API mode)
+    if args.api:
+        api_url = get_api_url_tm(args.api_url)
+        args.api_url = api_url
+    
+    # Initialize project registry
+    registry = ProjectRegistry()
+    
+    # Handle project listing
+    if args.list_projects:
+        projects = registry.list_projects()
+        if not projects:
+            print("No projects registered. Discovering projects...")
+            discovered = registry.discover_projects()
+            if discovered:
+                registry.register_projects(discovered)
+                projects = registry.list_projects()
+        
+        if projects:
+            current_id = registry.projects.get('current_project')
+            print(f"📋 Available projects ({len(projects)}):")
+            for i, project in enumerate(projects, 1):
+                current_marker = "👉 " if project['id'] == current_id else "   "
+                active_marker = "🟢" if project.get('active') else "⚫"
+                print(f"{current_marker}{active_marker} {i}. {project['name']} [{project['id'][:8]}]")
+                print(f"      {project['path']}")
+        else:
+            print("No Task-Master projects found.")
+        return 0
+    
+    # Handle project selection
+    if args.select_project:
+        projects = registry.list_projects()
+        if not projects:
+            print("No projects available. Run with --list-projects first.")
+            return 1
+        
+        print("📋 Select a project:")
+        for i, project in enumerate(projects, 1):
+            active_marker = "🟢" if project.get('active') else "⚫"
+            print(f"{active_marker} {i}. {project['name']}")
+            print(f"    {project['path']}")
+        
+        try:
+            choice = input("\nEnter project number: ").strip()
+            project_index = int(choice) - 1
+            
+            if 0 <= project_index < len(projects):
+                selected_project = projects[project_index]
+                registry.set_current_project(selected_project['id'])
+                print(f"✅ Selected: {selected_project['name']}")
+                args.project_id = selected_project['id']
+            else:
+                print("❌ Invalid selection")
+                return 1
+        except (ValueError, KeyboardInterrupt):
+            print("\n❌ Selection cancelled")
+            return 1
+    
+    # Determine which project to use
+    if args.project_id:
+        # Use specific project ID
+        result = registry.get_project_context(args.project_id)
+        project = registry.get_project(args.project_id)
+    elif args.project_root:
+        # Use specific project root (legacy behavior)
+        print("🔍 Extracting Task-Master context...")
+        extractor = TaskMasterContextExtractor(args.project_root)
+        context, variables = extractor.get_context_for_prompt(args.prompt_id)
+        result = (context, variables)
+        project = {'name': os.path.basename(args.project_root), 'path': args.project_root}
+    else:
+        # Auto-detect current project
+        print("🔍 Auto-detecting current project...")
+        current_project = registry.auto_detect_current_project()
+        
+        if current_project:
+            print(f"📂 Found project: {current_project['name']}")
+            result = registry.get_project_context(current_project['id'])
+            project = current_project
+        else:
+            # Fall back to direct extraction
+            print("🔍 No registered project found, using current directory...")
+            extractor = TaskMasterContextExtractor()
+            context, variables = extractor.get_context_for_prompt(args.prompt_id)
+            result = (context, variables)
+            project = {'name': 'Current Directory', 'path': os.getcwd()}
+    
+    if not result:
+        print("❌ Unable to extract project context")
+        return 1
+    
+    context, variables = result
+    
+    if args.show_context:
+        print("\n📊 Extracted Context:")
+        print(json.dumps(context, indent=2))
+        print("\n📝 Variables:")
+        for key, value in variables.items():
+            print(f"{key}: {value[:100]}..." if len(str(value)) > 100 else f"{key}: {value}")
+    
+    # Get and render prompt
+    if args.api:
+        # Use API
+        print(f"\n💡 Rendering prompt {args.prompt_id} via API...")
+        try:
+            response = requests.post(f"{args.api_url}/prompts/{args.prompt_id}/render", 
+                                   json={'variables': variables})
+            if response.status_code == 200:
+                result = response.json()
+                prompt_content = result['content']
+                prompt_title = result['title']
+            else:
+                print(f"❌ API Error: {response.json().get('error', 'Unknown error')}")
+                return 1
+        except Exception as e:
+            print(f"❌ Failed to connect to API: {e}")
+            print("💡 Tip: Start the API with: python3 src/prompt_api.py")
+            return 1
+    else:
+        # Direct access
+        print(f"\n💡 Rendering prompt {args.prompt_id}...")
+        pm_instance = PromptManager()
+        prompt = pm_instance.get_prompt(args.prompt_id)
+        
+        if not prompt:
+            print(f"❌ Prompt {args.prompt_id} not found")
+            return 1
+        
+        prompt_title = prompt['title']
+        prompt_content = prompt['content']
+        
+        # Replace variables
+        for var, value in variables.items():
+            prompt_content = prompt_content.replace(f"{{{var}}}", value)
+    
+    print(f"✅ Generated prompt: {prompt_title}")
+    
+    if args.dry_run:
+        print("\n" + "="*60)
+        print(prompt_content)
+        print("="*60)
+    else:
+        if copy_to_clipboard(prompt_content):
+            print("📋 Copied to clipboard!")
+            print(f"\n💡 Project: {project['name']}")
+            if context.get('active_task'):
+                task_name = context['active_task'].name if hasattr(context['active_task'], 'name') else str(context['active_task'])
+                print(f"   📂 Active Task: {task_name}")
+            if context.get('git_branch'):
+                print(f"   🌿 Branch: {context['git_branch']}")
+            if context.get('prd_location'):
+                print(f"   📄 PRD: {context['prd_location']}")
+            print("\n🚀 Ready to paste into Claude Code!")
+        else:
+            print("❌ Failed to copy to clipboard")
+            print("\nPrompt content:")
+            print("-" * 60)
+            print(prompt_content)
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
