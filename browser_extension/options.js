@@ -15,7 +15,8 @@ class OptionsManager {
     async loadSettings() {
         try {
             const settings = await chrome.storage.sync.get([
-                'apiUrl', 'isEnabled', 'autoSuggest', 'showWidget', 'autoDiscovery'
+                'apiUrl', 'isEnabled', 'autoSuggest', 'showWidget', 'autoDiscovery',
+                'aiProvider', 'aiApiKey', 'aiModel'
             ]);
 
             document.getElementById('api-url').value = settings.apiUrl || this.apiUrl;
@@ -24,9 +25,68 @@ class OptionsManager {
             document.getElementById('show-widget').checked = settings.showWidget !== false;
             document.getElementById('auto-discovery').checked = settings.autoDiscovery !== false;
 
+            // Load AI provider settings
+            if (settings.aiProvider) {
+                document.getElementById('ai-provider').value = settings.aiProvider;
+                await this.loadModelsForProvider(settings.aiProvider);
+                if (settings.aiModel) {
+                    document.getElementById('ai-model').value = settings.aiModel;
+                }
+            }
+            if (settings.aiApiKey) {
+                document.getElementById('api-key').value = settings.aiApiKey;
+            }
+
             this.apiUrl = settings.apiUrl || this.apiUrl;
+            
+            // Also load provider config from backend
+            await this.loadProviderConfig();
         } catch (error) {
             this.showStatus('Failed to load settings', 'error');
+        }
+    }
+    
+    async loadProviderConfig() {
+        try {
+            const response = await fetch(`${this.apiUrl}/config`);
+            if (response.ok) {
+                const config = await response.json();
+                if (config.provider && !document.getElementById('ai-provider').value) {
+                    document.getElementById('ai-provider').value = config.provider;
+                    await this.loadModelsForProvider(config.provider);
+                    if (config.model) {
+                        document.getElementById('ai-model').value = config.model;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load provider config:', error);
+        }
+    }
+    
+    async loadModelsForProvider(provider) {
+        const modelSelect = document.getElementById('ai-model');
+        modelSelect.innerHTML = '<option value="">Select a model...</option>';
+        
+        try {
+            const response = await fetch(`${this.apiUrl}/config`);
+            if (response.ok) {
+                const config = await response.json();
+                const providerInfo = config.providers[provider];
+                if (providerInfo && providerInfo.models) {
+                    providerInfo.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        if (model === providerInfo.default_model) {
+                            option.textContent += ' (default)';
+                        }
+                        modelSelect.appendChild(option);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load models:', error);
         }
     }
 
@@ -34,6 +94,21 @@ class OptionsManager {
         // API Configuration
         document.getElementById('test-connection').addEventListener('click', () => {
             this.testConnection();
+        });
+        
+        // AI Provider Configuration
+        document.getElementById('ai-provider').addEventListener('change', async (e) => {
+            if (e.target.value) {
+                await this.loadModelsForProvider(e.target.value);
+            }
+        });
+        
+        document.getElementById('validate-api-key').addEventListener('click', () => {
+            this.validateApiKey();
+        });
+        
+        document.getElementById('save-provider').addEventListener('click', () => {
+            this.saveProviderConfig();
         });
 
         // Project Management
@@ -703,6 +778,102 @@ class OptionsManager {
             // Focus back on the path input
             document.getElementById('project-path').focus();
         });
+    }
+    
+    async validateApiKey() {
+        const provider = document.getElementById('ai-provider').value;
+        const apiKey = document.getElementById('api-key').value;
+        
+        if (!provider || !apiKey) {
+            this.showProviderStatus('Please select a provider and enter an API key', 'error');
+            return;
+        }
+        
+        const button = document.getElementById('validate-api-key');
+        button.textContent = 'Validating...';
+        button.disabled = true;
+        
+        try {
+            const response = await fetch(`${this.apiUrl}/config/validate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ provider, api_key: apiKey })
+            });
+            
+            const result = await response.json();
+            
+            if (result.valid) {
+                this.showProviderStatus('✅ API key is valid!', 'success');
+            } else {
+                this.showProviderStatus(`❌ Invalid API key: ${result.message}`, 'error');
+            }
+        } catch (error) {
+            this.showProviderStatus(`❌ Validation failed: ${error.message}`, 'error');
+        } finally {
+            button.textContent = 'Validate API Key';
+            button.disabled = false;
+        }
+    }
+    
+    async saveProviderConfig() {
+        const provider = document.getElementById('ai-provider').value;
+        const apiKey = document.getElementById('api-key').value;
+        const model = document.getElementById('ai-model').value;
+        
+        if (!provider) {
+            this.showProviderStatus('Please select a provider', 'error');
+            return;
+        }
+        
+        const button = document.getElementById('save-provider');
+        button.textContent = 'Saving...';
+        button.disabled = true;
+        
+        try {
+            // Save to browser storage
+            await chrome.storage.sync.set({
+                aiProvider: provider,
+                aiApiKey: apiKey,
+                aiModel: model
+            });
+            
+            // Save to backend
+            const response = await fetch(`${this.apiUrl}/config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    provider,
+                    api_key: apiKey,
+                    model
+                })
+            });
+            
+            if (response.ok) {
+                this.showProviderStatus('✅ Configuration saved successfully!', 'success');
+            } else {
+                const error = await response.json();
+                this.showProviderStatus(`❌ Failed to save: ${error.error}`, 'error');
+            }
+        } catch (error) {
+            this.showProviderStatus(`❌ Save failed: ${error.message}`, 'error');
+        } finally {
+            button.textContent = 'Save Configuration';
+            button.disabled = false;
+        }
+    }
+    
+    showProviderStatus(message, type) {
+        const statusEl = document.getElementById('provider-status');
+        statusEl.textContent = message;
+        statusEl.className = `status ${type}`;
+        statusEl.classList.remove('hidden');
+        setTimeout(() => {
+            statusEl.classList.add('hidden');
+        }, 5000);
     }
 }
 

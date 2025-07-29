@@ -354,5 +354,77 @@ def update_settings():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+# AI Provider Configuration endpoints
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """Get current AI provider configuration"""
+    from config_manager import ConfigManager
+    config = ConfigManager()
+    
+    return jsonify({
+        'provider': config.get_current_provider(),
+        'model': config.get_model(),
+        'configured': config.is_configured(),
+        'providers': config.SUPPORTED_PROVIDERS
+    })
+
+@app.route('/api/config', methods=['POST'])
+def update_config():
+    """Update AI provider configuration"""
+    from config_manager import ConfigManager
+    config = ConfigManager()
+    
+    try:
+        data = request.json
+        provider = data.get('provider')
+        api_key = data.get('api_key')
+        model = data.get('model')
+        
+        if not provider:
+            return jsonify({"error": "Provider is required"}), 400
+        
+        config.update_provider(provider, api_key=api_key, model=model)
+        
+        return jsonify({
+            "success": True,
+            "provider": provider,
+            "model": config.get_model(provider),
+            "configured": config.is_configured()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/config/validate', methods=['POST'])
+def validate_config():
+    """Validate API key by making a test request"""
+    from config_manager import ConfigManager
+    from opus_reasoning_engine import OpusReasoningEngine
+    
+    config = ConfigManager()
+    
+    try:
+        # Temporarily update config with test values
+        data = request.json
+        provider = data.get('provider')
+        api_key = data.get('api_key')
+        
+        if not provider or not api_key:
+            return jsonify({"error": "Provider and API key required"}), 400
+        
+        # Test the configuration
+        temp_config = ConfigManager()
+        temp_config.update_provider(provider, api_key=api_key)
+        
+        engine = OpusReasoningEngine(temp_config)
+        # Try a simple test prompt
+        try:
+            response = engine._call_provider("Hello, this is a test. Please respond with 'OK'.")
+            return jsonify({"valid": True, "message": "API key is valid"})
+        except Exception as e:
+            return jsonify({"valid": False, "message": str(e)})
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

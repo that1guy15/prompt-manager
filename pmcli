@@ -269,10 +269,75 @@ def main():
     sanitize_parser.add_argument("-p", "--preview", action="store_true",
                                 help="Preview without copying to clipboard")
     
+    # Configuration management
+    config_parser = subparsers.add_parser("config", help="Configure AI provider settings")
+    config_subparsers = config_parser.add_subparsers(dest="config_command", help="Config commands")
+    
+    # Setup wizard
+    config_subparsers.add_parser("setup", help="Run interactive setup wizard")
+    
+    # Show current config
+    config_subparsers.add_parser("show", help="Show current configuration")
+    
+    # Set provider
+    config_set_parser = config_subparsers.add_parser("set", help="Set configuration values")
+    config_set_parser.add_argument("--provider", choices=['anthropic', 'openrouter', 'requesty'],
+                                  help="Set AI provider")
+    config_set_parser.add_argument("--api-key", help="Set API key for current provider")
+    config_set_parser.add_argument("--model", help="Set model for current provider")
+    
     args = parser.parse_args()
     
     # Handle CRUD commands first (don't show Task-Master banner for these)
-    if args.command in ['list', 'copy', 'show', 'delete', 'add', 'var', 'svar', 'sanitize']:
+    if args.command in ['list', 'copy', 'show', 'delete', 'add', 'var', 'svar', 'sanitize', 'config']:
+        # Import ConfigManager for config commands
+        if args.command == 'config':
+            from config_manager import ConfigManager
+            config = ConfigManager()
+            
+            if not args.config_command:
+                config_parser.print_help()
+                return 0
+            
+            if args.config_command == 'setup':
+                config.setup_wizard()
+                return 0
+            
+            elif args.config_command == 'show':
+                settings = config.get_all_settings()
+                print("\n🔧 Current Configuration")
+                print("=" * 40)
+                print(f"Provider: {settings.get('provider', 'Not configured')}")
+                print(f"Model: {settings.get('model', 'Not set')}")
+                print(f"Configured: {'✅ Yes' if settings.get('configured') else '❌ No'}")
+                print(f"Config file: {settings.get('config_file')}")
+                return 0
+            
+            elif args.config_command == 'set':
+                if args.provider:
+                    config.update_provider(args.provider)
+                    print(f"✅ Provider set to: {args.provider}")
+                
+                if args.api_key:
+                    current_provider = config.get_current_provider()
+                    if not current_provider:
+                        print("❌ Please set a provider first: pmcli config set --provider <provider>")
+                        return 1
+                    config.update_provider(current_provider, api_key=args.api_key)
+                    print("✅ API key updated")
+                
+                if args.model:
+                    current_provider = config.get_current_provider()
+                    if not current_provider:
+                        print("❌ Please set a provider first: pmcli config set --provider <provider>")
+                        return 1
+                    config.update_provider(current_provider, model=args.model)
+                    print(f"✅ Model set to: {args.model}")
+                
+                return 0
+            
+            return 0
+        
         pm = PromptManager(PROMPTS_FILE)
         
         if args.command == "list":

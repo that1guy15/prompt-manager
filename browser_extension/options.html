@@ -276,6 +276,23 @@
             border-radius: 6px;
             margin-top: 20px;
         }
+        
+        .help-text {
+            display: block;
+            margin-top: 4px;
+            color: #6c757d;
+            font-size: 13px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        select.form-input {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -300,6 +317,44 @@
                 </div>
                 
                 <button id="test-connection" class="btn btn-secondary">Test Connection</button>
+            </div>
+            
+            <!-- AI Provider Configuration -->
+            <div class="section">
+                <div class="section-title">AI Provider Configuration</div>
+                <div class="section-description">
+                    Configure your AI provider for prompt optimization and suggestions.
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="ai-provider">Provider</label>
+                    <select id="ai-provider" class="form-input">
+                        <option value="">Select a provider...</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="requesty">Requesty</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="api-key">API Key</label>
+                    <input type="password" id="api-key" class="form-input" placeholder="Enter your API key">
+                    <small class="help-text">Your API key is stored securely and never sent to our servers.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="ai-model">Model</label>
+                    <select id="ai-model" class="form-input">
+                        <option value="">Select a model...</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="validate-api-key" class="btn btn-secondary">Validate API Key</button>
+                    <button id="save-provider" class="btn btn-primary">Save Configuration</button>
+                </div>
+                
+                <div id="provider-status" class="status hidden" style="margin-top: 15px;"></div>
             </div>
             
             <!-- Extension Settings -->

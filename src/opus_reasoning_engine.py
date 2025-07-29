@@ -7,14 +7,20 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import numpy as np
 from collections import defaultdict
+from config_manager import ConfigManager
 
 class OpusReasoningEngine:
-    def __init__(self, api_key: str = None, openrouter_key: str = None):
-        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
-        self.openrouter_key = openrouter_key or os.getenv('OPENROUTER_API_KEY')
-        self.model = "claude-3-opus-20240229"
+    def __init__(self, config_manager: Optional[ConfigManager] = None):
+        self.config = config_manager or ConfigManager()
+        self.provider = self.config.get_current_provider()
+        self.api_key = self.config.get_api_key()
+        self.model = self.config.get_model()
         self.usage_history = []
         self.prompt_effectiveness = defaultdict(lambda: {'success': 0, 'total': 0})
+        
+        # Ensure we have configuration
+        if not self.config.is_configured():
+            print("⚠️  AI provider not configured. Run 'pmcli config' to set up.")
     
     def analyze_prompt_effectiveness(self, prompt_id: int, task_context: Dict, outcome: Dict) -> Dict:
         """Use Opus to analyze why a prompt was effective or not"""
@@ -34,10 +40,7 @@ Please analyze:
 Provide structured analysis with actionable insights."""
 
         try:
-            if self.openrouter_key:
-                response = self._call_openrouter(analysis_prompt)
-            else:
-                response = self._call_anthropic(analysis_prompt)
+            response = self._call_provider(analysis_prompt)
             
             return {
                 'analysis': response,
@@ -75,10 +78,7 @@ Return in this JSON format:
 }}"""
 
         try:
-            if self.openrouter_key:
-                response = self._call_openrouter(generation_prompt)
-            else:
-                response = self._call_anthropic(generation_prompt)
+            response = self._call_provider(generation_prompt)
             
             return json.loads(response)
         except Exception as e:
@@ -104,10 +104,7 @@ For each prompt:
 Return ranked list with scores and reasoning."""
 
         try:
-            if self.openrouter_key:
-                response = self._call_openrouter(optimization_prompt)
-            else:
-                response = self._call_anthropic(optimization_prompt)
+            response = self._call_provider(optimization_prompt)
             
             # Parse and structure the response
             return self._parse_ranking_response(response, available_prompts)
@@ -132,10 +129,7 @@ Identify:
 Provide actionable insights for improving the prompt management system."""
 
         try:
-            if self.openrouter_key:
-                response = self._call_openrouter(learning_prompt)
-            else:
-                response = self._call_anthropic(learning_prompt)
+            response = self._call_provider(learning_prompt)
             
             insights = {
                 'analysis': response,
@@ -175,10 +169,7 @@ Suggest:
 Provide specific, actionable improvements."""
 
         try:
-            if self.openrouter_key:
-                response = self._call_openrouter(improvement_prompt)
-            else:
-                response = self._call_anthropic(improvement_prompt)
+            response = self._call_provider(improvement_prompt)
             
             return {
                 'original_prompt': prompt,
@@ -188,17 +179,28 @@ Provide specific, actionable improvements."""
         except Exception as e:
             return {'error': str(e)}
     
+    def _call_provider(self, prompt: str) -> str:
+        """Call the configured provider API"""
+        if self.provider == 'anthropic':
+            return self._call_anthropic(prompt)
+        elif self.provider == 'openrouter':
+            return self._call_openrouter(prompt)
+        elif self.provider == 'requesty':
+            return self._call_requesty(prompt)
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+    
     def _call_openrouter(self, prompt: str) -> str:
-        """Call OpenRouter API with Opus model"""
+        """Call OpenRouter API with configured model"""
         headers = {
-            'Authorization': f'Bearer {self.openrouter_key}',
+            'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json',
             'HTTP-Referer': 'https://github.com/promptmanager',
             'X-Title': 'Prompt Manager Reasoning Engine'
         }
         
         data = {
-            'model': 'anthropic/claude-3-opus',
+            'model': self.model,
             'messages': [{'role': 'user', 'content': prompt}],
             'temperature': 0.7,
             'max_tokens': 2000
@@ -240,6 +242,31 @@ Provide specific, actionable improvements."""
             return response.json()['content'][0]['text']
         else:
             raise Exception(f"Anthropic API error: {response.status_code} - {response.text}")
+    
+    def _call_requesty(self, prompt: str) -> str:
+        """Call Requesty API with configured model"""
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        data = {
+            'model': self.model,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': 0.7,
+            'max_tokens': 2000
+        }
+        
+        response = requests.post(
+            'https://api.requesty.ai/v1/chat/completions',
+            headers=headers,
+            json=data
+        )
+        
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            raise Exception(f"Requesty API error: {response.status_code} - {response.text}")
     
     def _parse_ranking_response(self, response: str, prompts: List[Dict]) -> List[Dict]:
         """Parse Opus ranking response and reorder prompts"""
