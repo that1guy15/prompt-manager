@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prompt Manager Settings</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #3b82f6;
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+        
+        .section-description {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+        
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-label {
+            flex: 1;
+        }
+        
+        .setting-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .setting-desc {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .setting-control {
+            margin-left: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #1a1a1a;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #3b82f6;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .project-list {
+            margin-top: 20px;
+        }
+        
+        .project-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        
+        .project-info {
+            flex: 1;
+        }
+        
+        .project-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .project-path {
+            font-size: 13px;
+            color: #6c757d;
+            font-family: monospace;
+        }
+        
+        .project-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .status {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .add-project-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💡 Prompt Manager Settings</h1>
+        </div>
+        
+        <div class="content">
+            <div id="status-message" class="status hidden"></div>
+            
+            <!-- API Configuration -->
+            <div class="section">
+                <div class="section-title">API Configuration</div>
+                <div class="section-description">
+                    Configure connection to your Prompt Manager API server.
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="api-url">API URL</label>
+                    <input type="url" id="api-url" class="form-input" placeholder="http://localhost:5000/api">
+                </div>
+                
+                <button id="test-connection" class="btn btn-secondary">Test Connection</button>
+            </div>
+            
+            <!-- Extension Settings -->
+            <div class="section">
+                <div class="section-title">Extension Settings</div>
+                <div class="section-description">
+                    Control how the Prompt Manager extension behaves.
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Enable Extension</div>
+                        <div class="setting-desc">Show prompt suggestions on supported websites</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="switch">
+                            <input type="checkbox" id="extension-enabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Auto-suggest Prompts</div>
+                        <div class="setting-desc">Automatically suggest prompts when focusing on text fields</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="switch">
+                            <input type="checkbox" id="auto-suggest" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Show Widget</div>
+                        <div class="setting-desc">Display floating widget for quick access</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="switch">
+                            <input type="checkbox" id="show-widget" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Project Management -->
+            <div class="section">
+                <div class="section-title">Task-Master Projects</div>
+                <div class="section-description">
+                    Manage your Task-Master projects for context-aware prompt suggestions.
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Auto-discovery</div>
+                        <div class="setting-desc">Automatically discover new Task-Master projects</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="switch">
+                            <input type="checkbox" id="auto-discovery" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin: 20px 0;">
+                    <button id="refresh-projects" class="btn btn-secondary">Refresh Projects</button>
+                    <button id="discover-projects" class="btn btn-secondary">Discover New</button>
+                    <button id="add-project-btn" class="btn btn-primary">Add Manually</button>
+                </div>
+                
+                <div id="project-list" class="project-list">
+                    <div class="loading">Loading projects...</div>
+                </div>
+                
+                <!-- Add Project Form -->
+                <div id="add-project-form" class="add-project-form hidden">
+                    <h3>Add New Project</h3>
+                    <div class="form-group">
+                        <label class="form-label" for="project-name">Project Name</label>
+                        <input type="text" id="project-name" class="form-input" placeholder="My Project">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="project-path">Project Path</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="project-path" class="form-input" placeholder="/path/to/project" style="flex: 1;">
+                            <button type="button" id="browse-path" class="btn btn-secondary">📁 Browse</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="task-master-dir">Task-Master Directory (optional)</label>
+                        <input type="text" id="task-master-dir" class="form-input" placeholder="Auto-detected if not provided">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="save-project" class="btn btn-primary">Add Project</button>
+                        <button id="cancel-add" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Help & Documentation -->
+            <div class="section">
+                <div class="section-title">Help & Documentation</div>
+                <div class="section-description">
+                    Get help, view tutorials, and access documentation.
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                    <button id="quick-start-help" class="btn btn-secondary">📚 Quick Start Guide</button>
+                    <button id="project-help" class="btn btn-secondary">🔧 Project Setup</button>
+                    <button id="troubleshooting-help" class="btn btn-secondary">🆘 Troubleshooting</button>
+                    <button id="keyboard-shortcuts" class="btn btn-secondary">⌨️ Shortcuts</button>
+                </div>
+                
+                <div id="help-content" class="help-content hidden">
+                    <div class="help-section" id="help-section-content"></div>
+                </div>
+            </div>
+            
+            <!-- Save/Reset -->
+            <div class="section">
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="reset-settings" class="btn btn-secondary">Reset to Defaults</button>
+                    <button id="save-settings" class="btn btn-primary">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="options.js"></script>
+</body>
+</html>

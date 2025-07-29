@@ -1,0 +1,21 @@
+# Core dependencies
+flask>=2.0.0
+flask-cors>=3.0.0
+requests>=2.25.0
+numpy>=1.20.0
+
+# CLI enhancements
+click>=8.0.0
+rich>=10.0.0
+colorama>=0.4.4
+
+# Optional dependencies for advanced features
+# Uncomment if using AI-powered features
+# anthropic>=0.3.0
+# openai>=0.27.0
+
+# Development dependencies (install with: pip install -e ".[dev]")
+# pytest>=6.0
+# black>=21.0
+# flake8>=3.8
+# mypy>=0.800

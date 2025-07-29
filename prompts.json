@@ -11,7 +11,7 @@
         "quality"
       ],
       "created_at": "2025-01-20T09:00:00Z",
-      "used_count": 1,
+      "used_count": 3,
       "variables": [
         "context",
         "code"
@@ -63,7 +63,7 @@
         "management"
       ],
       "created_at": "2025-01-20T14:00:00Z",
-      "used_count": 3,
+      "used_count": 4,
       "variables": [
         "PROJECT_SUCCESS_CRITERIA",
         "FEATURE_DOCS",
@@ -83,7 +83,7 @@
         "automation"
       ],
       "created_at": "2025-07-23T12:02:40.620305",
-      "used_count": 1,
+      "used_count": 4,
       "variables": [
         "payload",
         "expected_response",
@@ -105,13 +105,13 @@
       "description": "API endpoint URL",
       "default_value": "/api/v1/users",
       "created_at": "2025-07-23T11:23:50.928883",
-      "used_count": 1
+      "used_count": 4
     },
     "method": {
       "description": "HTTP method",
       "default_value": "GET",
       "created_at": "2025-07-23T11:23:55.082431",
-      "used_count": 1
+      "used_count": 4
     },
     "format": {
       "description": "Documentation format",
@@ -129,13 +129,13 @@
       "description": "Code snippet to review",
       "default_value": "",
       "created_at": "2025-07-23T11:47:53.704264",
-      "used_count": 1
+      "used_count": 3
     },
     "context": {
       "description": "Additional context for the task",
       "default_value": "",
       "created_at": "2025-07-23T11:47:58.985736",
-      "used_count": 1
+      "used_count": 3
     },
     "error": {
       "description": "Error message or stack trace",
@@ -171,43 +171,43 @@
       "description": "Location of the Product Requirements Document",
       "default_value": "/app/uploads/redesign_v3/PRD_TASK_MASTER.md",
       "created_at": "2025-07-23T11:53:00.246205",
-      "used_count": 3
+      "used_count": 4
     },
     "FEATURE_DOCS": {
       "description": "Supporting documentation directory path",
       "default_value": "/app/uploads/redesign_v3/docs",
       "created_at": "2025-07-23T11:53:05.563780",
-      "used_count": 3
+      "used_count": 4
     },
     "PROJECT_REQUIRMENTS": {
       "description": "Key project requirements",
       "default_value": "1. Unified file processing architecture with UnifiedFileManager\\n2. Cloud storage unification across all environments (DO Spaces)\\n3. Security architecture with private buckets and API-only access\\n4. All 4 user stories must work reliably (Direct, Draft, Scheduled, Override)\\n5. Complete migration from current fragile dual-file system",
       "created_at": "2025-07-23T11:53:14.769040",
-      "used_count": 3
+      "used_count": 4
     },
     "PROJECT_SUCCESS_CRITERIA": {
       "description": "Critical success criteria for the project",
       "default_value": "Reddit/YouTube file availability issues resolved\\n- Thumbnail stability guaranteed across all workflows\\n- Development/production parity achieved\\n- Security hardened with proper user authorization\\n- All platforms (Reddit, YouTube, Bluesky, Imgur) work consistently",
       "created_at": "2025-07-23T11:53:21.742029",
-      "used_count": 3
+      "used_count": 4
     },
     "CUSTOM_PROMPT": {
       "description": "Custom instructions for the task",
       "default_value": "This is a critical system redesign that addresses fundamental architectural problems.\\nQuality and reliability are prioritized over speed. Please review the current\\ntask-master projects and resume implementation of this PRD immediately.",
       "created_at": "2025-07-23T11:53:29.037744",
-      "used_count": 3
+      "used_count": 4
     },
     "payload": {
       "description": "Request payload JSON",
       "default_value": "{}",
       "created_at": "2025-07-23T12:02:46.190178",
-      "used_count": 1
+      "used_count": 4
     },
     "expected_response": {
       "description": "Expected API response",
       "default_value": "{\"status\": \"success\"}",
       "created_at": "2025-07-23T12:02:51.244851",
-      "used_count": 1
+      "used_count": 4
     }
   }
 }

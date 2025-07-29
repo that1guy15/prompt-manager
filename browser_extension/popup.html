@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prompt Manager</title>
+    <style>
+        body {
+            width: 350px;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            background: #3b82f6;
+            color: white;
+            padding: 16px 20px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header img {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .quick-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+            text-align: center;
+        }
+        
+        .stat-number {
+            display: block;
+            font-size: 24px;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .recent-prompts {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+            margin-bottom: 16px;
+        }
+        
+        .section-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e1e5e9;
+            font-weight: 600;
+            color: #1a1a1a;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .prompt-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .prompt-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .prompt-item:last-child {
+            border-bottom: none;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .prompt-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #1a1a1a;
+        }
+        
+        .prompt-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .action-btn {
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+        
+        .action-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .action-btn.primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .action-btn.primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .status.connected {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status.disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .status.connected .status-dot {
+            background: #16a34a;
+        }
+        
+        .status.disconnected .status-dot {
+            background: #dc2626;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        
+        .category-badge {
+            background: #e5e7eb;
+            color: #374151;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .usage-info {
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .efficiency-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .efficiency-badge.high {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .efficiency-badge.medium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .prompt-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+        }
+        
+        .last-used {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+        
+        .tags {
+            font-size: 11px;
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .prompt-item {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .prompt-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: transparent;
+            transition: background-color 0.2s ease;
+        }
+        
+        .prompt-item:hover::before {
+            background: #3b82f6;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .prompt-notification {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .notification-icon {
+            flex-shrink: 0;
+        }
+        
+        .notification-text {
+            line-height: 1.4;
+        }
+        
+        .setup-required {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .setup-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        
+        .setup-required h3 {
+            margin: 0 0 8px 0;
+            color: #1a1a1a;
+        }
+        
+        .setup-required p {
+            color: #6c757d;
+            margin: 0 0 16px 0;
+            font-size: 14px;
+        }
+        
+        .setup-steps {
+            text-align: left;
+            margin: 16px 0;
+        }
+        
+        .setup-step {
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        
+        .code-block {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 4px 0;
+            font-size: 12px;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .quick-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 4px;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .quick-action-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .action-icon {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="icons/logo.png" alt="Prompt Manager Logo">
+        <h1>Prompt Manager</h1>
+    </div>
+    
+    <div class="content">
+        <div id="setup-required" class="setup-required" style="display: none;">
+            <div class="setup-icon">⚙️</div>
+            <h3>Setup Required</h3>
+            <p>Welcome! Let's get your Prompt Manager configured.</p>
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <strong>1. Start the Backend Server:</strong>
+                    <div class="code-block">python3 src/prompt_api.py</div>
+                </div>
+                <div class="setup-step">
+                    <strong>2. Or configure a custom server URL below</strong>
+                </div>
+            </div>
+            <button id="start-setup-btn" class="action-btn primary">Configure Now</button>
+        </div>
+
+        <div id="status" class="status disconnected">
+            <div class="status-dot"></div>
+            <span>Connecting to API...</span>
+        </div>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        
+        <div id="loading" class="loading">
+            Loading your prompts...
+        </div>
+        
+        <div id="main-content" style="display: none;">
+            <div class="quick-stats">
+                <div class="stat-card">
+                    <span class="stat-number" id="total-prompts">0</span>
+                    <span class="stat-label">Total Prompts</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="used-today">0</span>
+                    <span class="stat-label">Used Today</span>
+                </div>
+            </div>
+            
+            <div class="recent-prompts">
+                <div class="section-header">Most Used Prompts</div>
+                <div id="recent-prompts-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button id="search-btn" class="action-btn primary">Search Prompts</button>
+                <button id="settings-btn" class="action-btn">⚙️ Settings</button>
+            </div>
+            
+            <div class="quick-actions">
+                <button id="server-config-btn" class="quick-action-btn">
+                    <span class="action-icon">🔧</span>
+                    <span>Server Config</span>
+                </button>
+                <button id="task-master-btn" class="quick-action-btn">
+                    <span class="action-icon">📋</span>
+                    <span>Task-Master</span>
+                </button>
+                <button id="help-btn" class="quick-action-btn">
+                    <span class="action-icon">❓</span>
+                    <span>Help</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
