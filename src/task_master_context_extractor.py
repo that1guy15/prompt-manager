@@ -29,6 +29,11 @@ class TaskMasterContextExtractor:
         """Find Task-Master directory in project"""
         root = Path(self.project_root)
         
+        # Skip if we're in home directory or root
+        home = Path.home()
+        if root == home or root == Path('/'):
+            return None
+            
         # Common Task-Master locations
         possible_paths = [
             root / 'task-master',
@@ -42,11 +47,18 @@ class TaskMasterContextExtractor:
             if path.exists() and path.is_dir():
                 return path
         
-        # Search for task-master config files
+        # Search for task-master config files (limit depth to avoid scanning entire filesystem)
+        max_depth = 3  # Only search 3 levels deep
         for config_file in ['task-master.yml', 'task-master.yaml', 'task-master.json', '.taskmaster']:
-            found = list(root.rglob(config_file))
-            if found:
-                return found[0].parent
+            for depth in range(max_depth + 1):
+                pattern = '/'.join(['*'] * depth) + '/' + config_file
+                try:
+                    found = list(root.glob(pattern))
+                    if found:
+                        return found[0].parent
+                except:
+                    # Skip if permission denied or other errors
+                    pass
         
         return None
     

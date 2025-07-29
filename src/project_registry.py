@@ -43,11 +43,13 @@ class ProjectRegistry:
         """Discover Task-Master projects in common locations"""
         if search_paths is None:
             search_paths = [
-                os.path.expanduser('~/'),
+                # Skip home directory root - too broad
                 os.path.expanduser('~/Projects'),
                 os.path.expanduser('~/Code'),
                 os.path.expanduser('~/workspace'),
                 os.path.expanduser('~/work'),
+                os.path.expanduser('~/Development'),
+                os.path.expanduser('~/dev'),
                 '/opt/projects',
                 '/usr/local/projects'
             ]
