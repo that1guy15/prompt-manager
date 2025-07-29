@@ -11,9 +11,9 @@ import subprocess
 class TaskMasterContextExtractor:
     """Extract project context and variables from Task-Master files"""
     
-    def __init__(self, project_root: str = None):
+    def __init__(self, project_root: str = None, task_master_dir: str = None):
         self.project_root = project_root or self._find_project_root()
-        self.task_master_dir = self._find_task_master_dir()
+        self.task_master_dir = Path(task_master_dir) if task_master_dir else self._get_configured_task_master_dir()
         self.context_cache = {}
     
     def _find_project_root(self) -> str:
@@ -25,42 +25,19 @@ class TaskMasterContextExtractor:
             current = current.parent
         return str(Path.cwd())
     
-    def _find_task_master_dir(self) -> Optional[Path]:
-        """Find Task-Master directory in project"""
-        root = Path(self.project_root)
-        
-        # Skip if we're in home directory or root
-        home = Path.home()
-        if root == home or root == Path('/'):
-            return None
+    def _get_configured_task_master_dir(self) -> Optional[Path]:
+        """Get Task-Master directory from configuration"""
+        try:
+            from config_manager import ConfigManager
+            config = ConfigManager()
+            task_master_path = config.get_task_master_path()
             
-        # Common Task-Master locations
-        possible_paths = [
-            root / 'task-master',
-            root / '.task-master',
-            root / 'tasks',
-            root / 'project' / 'tasks',
-            root / 'docs' / 'task-master'
-        ]
-        
-        for path in possible_paths:
-            if path.exists() and path.is_dir():
-                return path
-        
-        # Search for task-master config files (limit depth to avoid scanning entire filesystem)
-        max_depth = 3  # Only search 3 levels deep
-        for config_file in ['task-master.yml', 'task-master.yaml', 'task-master.json', '.taskmaster']:
-            for depth in range(max_depth + 1):
-                pattern = '/'.join(['*'] * depth) + '/' + config_file
-                try:
-                    found = list(root.glob(pattern))
-                    if found:
-                        return found[0].parent
-                except:
-                    # Skip if permission denied or other errors
-                    pass
-        
-        return None
+            if task_master_path and os.path.exists(task_master_path):
+                return Path(task_master_path)
+            else:
+                return None
+        except:
+            return None
     
     def extract_project_context(self) -> Dict[str, any]:
         """Extract comprehensive project context from Task-Master and project files"""

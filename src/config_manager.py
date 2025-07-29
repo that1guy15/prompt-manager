@@ -80,6 +80,7 @@ class ConfigManager:
             'provider': None,
             'api_keys': {},
             'models': {},
+            'task_master_path': None,
             'settings': {
                 'auto_save': True,
                 'verify_ssl': True
@@ -157,6 +158,20 @@ class ConfigManager:
                 print("❌ Invalid input. Please enter a number.")
         
         self.config['models'][selected_provider] = selected_model
+        
+        # Task-Master configuration
+        print(f"\n📋 Task-Master Configuration (Optional)")
+        print("If you use Task-Master for project management, specify the path to your task files.")
+        task_master_path = input("Task-Master directory path (press Enter to skip): ").strip()
+        
+        if task_master_path:
+            expanded_path = os.path.expanduser(task_master_path)
+            if os.path.exists(expanded_path):
+                self.config['task_master_path'] = expanded_path
+                print(f"✅ Task-Master path set to: {expanded_path}")
+            else:
+                print(f"⚠️  Path not found: {expanded_path}")
+                print("You can set this later with: pmcli config set --task-master-path <path>")
         
         # Save configuration
         self._save_config()
@@ -286,6 +301,19 @@ class ConfigManager:
         
         self._save_config()
     
+    def set_task_master_path(self, path: str):
+        """Set Task-Master directory path"""
+        expanded_path = os.path.expanduser(path)
+        if not os.path.exists(expanded_path):
+            raise ValueError(f"Path does not exist: {expanded_path}")
+        
+        self.config['task_master_path'] = expanded_path
+        self._save_config()
+    
+    def get_task_master_path(self) -> Optional[str]:
+        """Get configured Task-Master directory path"""
+        return self.config.get('task_master_path')
+    
     def get_provider_info(self, provider: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get full provider information"""
         if not provider:
@@ -313,6 +341,7 @@ class ConfigManager:
         return {
             'provider': self.get_current_provider(),
             'model': self.get_model(),
+            'task_master_path': self.get_task_master_path(),
             'configured': self.is_configured(),
             'config_file': str(self.config_file),
             'providers': list(self.SUPPORTED_PROVIDERS.keys())

@@ -287,9 +287,12 @@ class ProjectRegistry:
         
         # Import here to avoid circular imports
         from task_master_context_extractor import TaskMasterContextExtractor
+        from config_manager import ConfigManager
         
         try:
-            extractor = TaskMasterContextExtractor(project['path'])
+            config = ConfigManager()
+            task_master_path = config.get_task_master_path()
+            extractor = TaskMasterContextExtractor(project['path'], task_master_path)
             context, variables = extractor.get_context_for_prompt()
             
             # Add project registry info to context

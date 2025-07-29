@@ -285,6 +285,7 @@ def main():
                                   help="Set AI provider")
     config_set_parser.add_argument("--api-key", help="Set API key for current provider")
     config_set_parser.add_argument("--model", help="Set model for current provider")
+    config_set_parser.add_argument("--task-master-path", help="Set Task-Master directory path")
     
     args = parser.parse_args()
     
@@ -309,6 +310,7 @@ def main():
                 print("=" * 40)
                 print(f"Provider: {settings.get('provider', 'Not configured')}")
                 print(f"Model: {settings.get('model', 'Not set')}")
+                print(f"Task-Master Path: {settings.get('task_master_path', 'Not set')}")
                 print(f"Configured: {'✅ Yes' if settings.get('configured') else '❌ No'}")
                 print(f"Config file: {settings.get('config_file')}")
                 return 0
@@ -333,6 +335,14 @@ def main():
                         return 1
                     config.update_provider(current_provider, model=args.model)
                     print(f"✅ Model set to: {args.model}")
+                
+                if hasattr(args, 'task_master_path') and args.task_master_path:
+                    try:
+                        config.set_task_master_path(args.task_master_path)
+                        print(f"✅ Task-Master path set to: {args.task_master_path}")
+                    except ValueError as e:
+                        print(f"❌ {e}")
+                        return 1
                 
                 return 0
             
@@ -701,7 +711,8 @@ def main():
     elif args.project_root:
         # Use specific project root (legacy behavior)
         print("🔍 Extracting Task-Master context...")
-        extractor = TaskMasterContextExtractor(args.project_root)
+        task_master_path = config.get_task_master_path()
+        extractor = TaskMasterContextExtractor(args.project_root, task_master_path)
         context, variables = extractor.get_context_for_prompt(args.prompt_id)
         result = (context, variables)
         project = {'name': os.path.basename(args.project_root), 'path': args.project_root}
@@ -717,10 +728,16 @@ def main():
         else:
             # Fall back to direct extraction
             print("🔍 No registered project found, using current directory...")
-            extractor = TaskMasterContextExtractor()
-            context, variables = extractor.get_context_for_prompt(args.prompt_id)
-            result = (context, variables)
-            project = {'name': 'Current Directory', 'path': os.getcwd()}
+            task_master_path = config.get_task_master_path()
+            if task_master_path:
+                print(f"📋 Using configured Task-Master path: {task_master_path}")
+                extractor = TaskMasterContextExtractor(task_master_dir=task_master_path)
+                context, variables = extractor.get_context_for_prompt(args.prompt_id)
+                result = (context, variables)
+                project = {'name': 'Current Directory', 'path': os.getcwd()}
+            else:
+                print("❌ No Task-Master path configured. Use: pmcli config set --task-master-path <path>")
+                return 1
     
     if not result:
         print("❌ Unable to extract project context")
