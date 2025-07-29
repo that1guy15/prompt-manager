@@ -624,16 +624,15 @@ def main():
     from config_manager import ConfigManager
     config = ConfigManager()
     if not config.is_configured():
-        print("\n⚠️  AI provider not configured!")
-        print("This is required for Task-Master integration to work properly.\n")
-        print("Would you like to configure it now? (Y/n): ", end='', flush=True)
-        response = input().strip().lower()
+        print("\n⚠️  First-time setup required!")
+        print("Configure your AI provider for prompt optimization.\n")
+        response = input("Start setup wizard? (Y/n): ").strip().lower()
         if response != 'n':
             config.setup_wizard()
-            print("\n✅ Configuration complete! Continuing with Task-Master...\n")
+            print()  # Add spacing before continuing
         else:
-            print("\n💡 You can configure later with: pmcli config setup")
-            print("⚠️  Some features may not work without configuration.\n")
+            print("\n💡 Configure later with: pmcli config setup")
+            print("⚠️  Some features may not work without configuration.")
     
     # Get API URL with prompting if needed (only when using API mode)
     if args.api:

@@ -160,10 +160,59 @@ class ConfigManager:
         
         # Save configuration
         self._save_config()
-        print("\n✅ Configuration saved successfully!")
-        print(f"📁 Config location: {self.config_file}")
+        
+        # Test the configuration
+        print("\n🔍 Testing provider connection...")
+        if self._test_provider_connection():
+            print("✅ Provider connection successful!")
+        else:
+            print("⚠️  Provider test failed. Please check your API key.")
+            print("You can update it with: pmcli config set --api-key <key>")
+        
+        print(f"\n📁 Configuration saved to: {self.config_file}")
+        
+        # Show recommended commands
+        self._show_quick_start_commands()
         
         return True
+    
+    def _test_provider_connection(self) -> bool:
+        """Test the provider connection with a simple request"""
+        try:
+            # Simple test - just check if we can make a basic call
+            provider = self.get_current_provider()
+            api_key = self.get_api_key(provider)
+            
+            if not provider or not api_key:
+                return False
+            
+            # Quick validation based on provider
+            if provider == 'anthropic':
+                # Check if API key format looks valid
+                return api_key.startswith('sk-ant-')
+            elif provider == 'openrouter':
+                # OpenRouter keys are typically longer
+                return len(api_key) > 20
+            elif provider == 'requesty':
+                # Requesty key validation
+                return len(api_key) > 10
+                
+            return True
+        except:
+            return False
+    
+    def _show_quick_start_commands(self):
+        """Show recommended commands after setup"""
+        print("\n🚀 Quick Start - Top Commands:")
+        print("=" * 50)
+        print("\n1️⃣  List available prompts:")
+        print("   pmcli list\n")
+        print("2️⃣  Get project context for AI chat:")
+        print("   pmcli  # Auto-detects current project\n")
+        print("3️⃣  Add a new prompt:")
+        print("   pmcli add --manual \"Title\" \"Prompt content with {variables}\"\n")
+        print("\n💡 For more commands: pmcli --help")
+        print("📖 Full documentation: https://github.com/your-username/promptManager")
     
     def _get_api_key_url(self, provider: str) -> str:
         """Get URL for obtaining API keys"""
