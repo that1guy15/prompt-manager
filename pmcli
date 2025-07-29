@@ -14,6 +14,10 @@ import argparse
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
 
+# Get the base directory of the prompt manager installation
+PROMPT_MANAGER_DIR = os.path.dirname(os.path.abspath(__file__))
+PROMPTS_FILE = os.path.join(PROMPT_MANAGER_DIR, 'prompts.json')
+
 from task_master_context_extractor import TaskMasterContextExtractor
 from prompt_manager import PromptManager
 from project_registry import ProjectRegistry
@@ -269,7 +273,7 @@ def main():
     
     # Handle CRUD commands first (don't show Task-Master banner for these)
     if args.command in ['list', 'copy', 'show', 'delete', 'add', 'var', 'svar', 'sanitize']:
-        pm = PromptManager()
+        pm = PromptManager(PROMPTS_FILE)
         
         if args.command == "list":
             pm.list_prompts(args.category, args.tag, args.search)
@@ -673,7 +677,7 @@ def main():
     else:
         # Direct access
         print(f"\n💡 Rendering prompt {args.prompt_id}...")
-        pm_instance = PromptManager()
+        pm_instance = PromptManager(PROMPTS_FILE)
         prompt = pm_instance.get_prompt(args.prompt_id)
         
         if not prompt:
