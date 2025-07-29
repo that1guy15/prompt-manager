@@ -620,6 +620,21 @@ def main():
     # Show banner for Task-Master commands
     show_tm_banner()
     
+    # Check if AI provider is configured for first-time users
+    from config_manager import ConfigManager
+    config = ConfigManager()
+    if not config.is_configured():
+        print("\n⚠️  AI provider not configured!")
+        print("This is required for Task-Master integration to work properly.\n")
+        print("Would you like to configure it now? (Y/n): ", end='', flush=True)
+        response = input().strip().lower()
+        if response != 'n':
+            config.setup_wizard()
+            print("\n✅ Configuration complete! Continuing with Task-Master...\n")
+        else:
+            print("\n💡 You can configure later with: pmcli config setup")
+            print("⚠️  Some features may not work without configuration.\n")
+    
     # Get API URL with prompting if needed (only when using API mode)
     if args.api:
         api_url = get_api_url_tm(args.api_url)
